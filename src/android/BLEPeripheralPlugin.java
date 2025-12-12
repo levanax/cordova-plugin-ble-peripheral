@@ -13,6 +13,7 @@
 // limitations under the License.
 package com.megster.cordova.ble.peripheral;
 
+import android.Manifest;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -33,6 +34,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.ParcelUuid;
 import android.provider.Settings;
 import android.util.Base64;
@@ -44,6 +46,7 @@ import org.apache.cordova.CordovaInterface;
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CordovaWebView;
 import org.apache.cordova.LOG;
+import org.apache.cordova.PermissionHelper;
 import org.apache.cordova.PluginResult;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -85,6 +88,15 @@ public class BLEPeripheralPlugin extends CordovaPlugin {
 
     private static final String TAG = "BLEPeripheral";
     private static final int REQUEST_ENABLE_BLUETOOTH = 17;
+    private static final int REQUEST_BLUETOOTH_PERMISSIONS = 2001;
+    private static final String[] LEGACY_BLUETOOTH_PERMISSIONS = new String[] {
+            Manifest.permission.BLUETOOTH,
+            Manifest.permission.BLUETOOTH_ADMIN
+    };
+    private static final String[] ANDROID_12_BLUETOOTH_PERMISSIONS = new String[] {
+            Manifest.permission.BLUETOOTH_ADVERTISE,
+            Manifest.permission.BLUETOOTH_CONNECT
+    };
 
     private BluetoothAdapter bluetoothAdapter;
     private BluetoothGattServer gattServer;
@@ -101,6 +113,9 @@ public class BLEPeripheralPlugin extends CordovaPlugin {
         put(BluetoothAdapter.STATE_ON, "on");
         put(BluetoothAdapter.STATE_TURNING_ON, "turningOn");
     }};
+    private String pendingAction;
+    private CordovaArgs pendingArgs;
+    private CallbackContext pendingCallback;
 
     @Override
     public void initialize(CordovaInterface cordova, CordovaWebView webView) {
@@ -121,6 +136,18 @@ public class BLEPeripheralPlugin extends CordovaPlugin {
     public boolean execute(String action, CordovaArgs args, CallbackContext callbackContext) throws JSONException {
         LOG.d(TAG, "action = " + action);
 
+        if (requiresBluetoothPermissions(action) && !hasBluetoothPermissions()) {
+            pendingAction = action;
+            pendingArgs = args;
+            pendingCallback = callbackContext;
+            requestBluetoothPermissions();
+            return true;
+        }
+
+        return handleAction(action, args, callbackContext);
+    }
+
+    private boolean handleAction(String action, CordovaArgs args, CallbackContext callbackContext) throws JSONException {
         if (bluetoothAdapter == null) {
             Activity activity = cordova.getActivity();
             boolean hardwareSupportsBLE = activity.getApplicationContext()
@@ -140,6 +167,11 @@ public class BLEPeripheralPlugin extends CordovaPlugin {
                 return false;
             }
             bluetoothAdapter = bluetoothManager.getAdapter();
+
+            if (bluetoothAdapter == null) {
+                callbackContext.error("Unable to get Bluetooth adapter");
+                return false;
+            }
 
             boolean hardwareSupportsPeripherals = bluetoothAdapter.isMultipleAdvertisementSupported();
             if (!hardwareSupportsPeripherals) {
@@ -301,6 +333,11 @@ public class BLEPeripheralPlugin extends CordovaPlugin {
 
             BluetoothLeAdvertiser bluetoothLeAdvertiser = bluetoothAdapter.getBluetoothLeAdvertiser();
 
+            if (bluetoothLeAdvertiser == null) {
+                callbackContext.error("Bluetooth advertiser is not available");
+                return true;
+            }
+
             AdvertiseData advertisementData = getAdvertisementData(serviceUUID);
             AdvertiseSettings advertiseSettings = getAdvertiseSettings();
 
@@ -354,6 +391,36 @@ public class BLEPeripheralPlugin extends CordovaPlugin {
         }
 
         return validAction;
+    }
+
+    private boolean hasBluetoothPermissions() {
+        for (String permission : getRequiredPermissions()) {
+            if (!PermissionHelper.hasPermission(this, permission)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void requestBluetoothPermissions() {
+        PermissionHelper.requestPermissions(this, REQUEST_BLUETOOTH_PERMISSIONS, getRequiredPermissions());
+    }
+
+    private String[] getRequiredPermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            return ANDROID_12_BLUETOOTH_PERMISSIONS;
+        }
+        return LEGACY_BLUETOOTH_PERMISSIONS;
+    }
+
+    private boolean requiresBluetoothPermissions(String action) {
+        return !SETTINGS.equals(action);
+    }
+
+    private void clearPendingPermissionRequest() {
+        pendingAction = null;
+        pendingArgs = null;
+        pendingCallback = null;
     }
 
 
@@ -423,6 +490,30 @@ public class BLEPeripheralPlugin extends CordovaPlugin {
             }
 
             enableBluetoothCallback = null;
+        }
+    }
+
+    @Override
+    public void onRequestPermissionResult(int requestCode, String[] permissions, int[] grantResults) throws JSONException {
+        if (requestCode == REQUEST_BLUETOOTH_PERMISSIONS) {
+            if (hasBluetoothPermissions()) {
+                if (pendingAction != null && pendingArgs != null && pendingCallback != null) {
+                    String action = pendingAction;
+                    CordovaArgs args = pendingArgs;
+                    CallbackContext callbackContext = pendingCallback;
+                    clearPendingPermissionRequest();
+                    handleAction(action, args, callbackContext);
+                } else {
+                    clearPendingPermissionRequest();
+                }
+            } else {
+                if (pendingCallback != null) {
+                    pendingCallback.error("Bluetooth permission denied");
+                }
+                clearPendingPermissionRequest();
+            }
+        } else {
+            super.onRequestPermissionResult(requestCode, permissions, grantResults);
         }
     }
 
