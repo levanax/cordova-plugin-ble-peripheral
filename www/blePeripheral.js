@@ -77,11 +77,23 @@ registerWriteRequestCallback();
 
 function registerBluetoothStateChangeCallback() {
 
-    var bluetoothStateChanged = function(state) {
-      console.log('bluetoothStateChanged', state);
+    var bluetoothStateChanged = function(data) {
+      console.log('bluetoothStateChanged', data);
 
       if (onBluetoothStateChangeCallback && typeof onBluetoothStateChangeCallback === 'function') {
-        onBluetoothStateChangeCallback(state);
+        // 检查数据类型，如果是字符串则为旧格式（向后兼容）
+        if (typeof data === 'string') {
+          onBluetoothStateChangeCallback(data);
+        } else if (data && typeof data === 'object') {
+          // 新格式，包含类型信息
+          if (data.type === 'bluetooth') {
+            // 蓝牙适配器状态变化
+            onBluetoothStateChangeCallback(data.state);
+          } else if (data.type === 'connection') {
+            // 连接状态变化，传递完整的数据对象
+            onBluetoothStateChangeCallback(data);
+          }
+        }
       }
     };
 

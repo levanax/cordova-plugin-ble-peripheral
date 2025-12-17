@@ -435,9 +435,17 @@ public class BLEPeripheralPlugin extends CordovaPlugin {
 
     private void sendBluetoothStateChange(int state) {
         if (this.stateCallback != null) {
-            PluginResult result = new PluginResult(PluginResult.Status.OK, this.bluetoothStates.get(state));
-            result.setKeepCallback(true);
-            this.stateCallback.sendPluginResult(result);
+            try {
+                JSONObject message = new JSONObject();
+                message.put("type", "bluetooth");
+                message.put("state", this.bluetoothStates.get(state));
+
+                PluginResult result = new PluginResult(PluginResult.Status.OK, message);
+                result.setKeepCallback(true);
+                this.stateCallback.sendPluginResult(result);
+            } catch (JSONException e) {
+                Log.e(TAG, "JSON encoding failed in sendBluetoothStateChange", e);
+            }
         }
     }
 
@@ -521,10 +529,27 @@ public class BLEPeripheralPlugin extends CordovaPlugin {
         @Override
         public void onConnectionStateChange(BluetoothDevice device, int status, int newState) {
             super.onConnectionStateChange(device, status, newState);
-            Log.d(TAG, "onConnectionStateChange status=" + status + "->" + newState);
+            Log.d(TAG, "onConnectionStateChange device=" + device.getAddress() + " status=" + status + " newState=" + newState);
 
             if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 registeredDevices.remove(device);
+            }
+
+            // 通过现有的stateCallback发送连接状态变化
+            if (stateCallback != null) {
+                try {
+                    JSONObject message = new JSONObject();
+                    message.put("type", "connection");
+                    message.put("device", device.getAddress());
+                    message.put("status", status);
+                    message.put("state", getConnectionStateString(newState));
+
+                    PluginResult result = new PluginResult(PluginResult.Status.OK, message);
+                    result.setKeepCallback(true);
+                    stateCallback.sendPluginResult(result);
+                } catch (JSONException e) {
+                    Log.e(TAG, "JSON encoding failed in onConnectionStateChange", e);
+                }
             }
 
         }
@@ -703,6 +728,21 @@ public class BLEPeripheralPlugin extends CordovaPlugin {
     private BluetoothGattDescriptor createClientCharacteristicConfigurationDescriptor() {
         return new BluetoothGattDescriptor(CLIENT_CHARACTERISTIC_CONFIGURATION_UUID,
                 BluetoothGattDescriptor.PERMISSION_READ | BluetoothGattDescriptor.PERMISSION_WRITE);
+    }
+
+    private String getConnectionStateString(int state) {
+        switch (state) {
+            case BluetoothProfile.STATE_DISCONNECTED:
+                return "disconnected";
+            case BluetoothProfile.STATE_CONNECTING:
+                return "connecting";
+            case BluetoothProfile.STATE_CONNECTED:
+                return "connected";
+            case BluetoothProfile.STATE_DISCONNECTING:
+                return "disconnecting";
+            default:
+                return "unknown";
+        }
     }
 
 }

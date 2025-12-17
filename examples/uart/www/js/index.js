@@ -123,9 +123,16 @@ var app = {
         // warning: message should be escaped to avoid javascript injection
         outputDiv.innerHTML += '<i>' + message + '</i><br/>';
     },
-    onBluetoothStateChange: function(state) {
-        console.log('Bluetooth State is', state);
-        outputDiv.innerHTML += 'Bluetooth  is ' +  state + '<br/>';
+    onBluetoothStateChange: function(data) {
+        console.log('Bluetooth State Changed:', data);
+        
+        if (typeof data === 'string') {
+            // 蓝牙适配器状态变化
+            outputDiv.innerHTML += 'Bluetooth is ' + data + '<br/>';
+        } else if (data && data.type === 'connection') {
+            // 设备连接状态变化
+            outputDiv.innerHTML += 'Device ' + data.device + ' is ' + data.state + '<br/>';
+        }
     }
 };
 
