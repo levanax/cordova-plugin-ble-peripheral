@@ -18,11 +18,15 @@
         <title>Hello World</title>
     </head>
     <body>
-        <h2>UART</h2>
+        <h2>UART - 增强版通知功能</h2>
         <div>
             <input type="text" id="messageInput" value="Hello" />
-            <span id="sendButton">Send</span>
-            <div id="outputDiv"></div>
+            <div style="margin: 10px 0;">
+                <span id="sendButton" style="background: #007AFF; color: white; padding: 8px 16px; border-radius: 5px; cursor: pointer; margin-right: 10px;">发送 (设置值)</span>
+                <span id="notifyButton" style="background: #34C759; color: white; padding: 8px 16px; border-radius: 5px; cursor: pointer; margin-right: 10px;">通知发送</span>
+                <span id="broadcastButton" style="background: #FF9500; color: white; padding: 8px 16px; border-radius: 5px; cursor: pointer;">广播消息</span>
+            </div>
+            <div id="outputDiv" style="border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: auto; background: #f9f9f9; margin-top: 10px;"></div>
         </div>
         <script type="text/javascript" src="cordova.js"></script>
         <script type="text/javascript" src="js/index.js"></script>

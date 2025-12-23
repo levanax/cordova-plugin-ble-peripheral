@@ -25,6 +25,10 @@ var app = {
     bindEvents: function() {
         document.addEventListener('deviceready', this.onDeviceReady, false);
         sendButton.addEventListener('touchstart', this.updateCharacteristicValue, false);
+        
+        // 添加新按钮的事件监听器
+        document.getElementById('notifyButton').addEventListener('touchstart', this.sendNotificationMessage, false);
+        document.getElementById('broadcastButton').addEventListener('touchstart', this.broadcastMessage, false);
     },
     onDeviceReady: function() {
         var property = blePeripheral.properties;
@@ -116,6 +120,39 @@ var app = {
         blePeripheral.setCharacteristicValue(SERVICE_UUID, RX_UUID, bytes).
             then(success, failure);
 
+    },
+    
+    // 新增：使用通知功能发送消息
+    sendNotificationMessage: function() {
+        var input = document.querySelector('input');
+        var bytes = stringToBytes(input.value);
+        
+        // 使用新的通知方法发送消息
+        blePeripheral.notifyCharacteristicValue(SERVICE_UUID, RX_UUID, bytes)
+            .then(function(result) {
+                outputDiv.innerHTML += '<strong>[通知已发送]</strong> ' + input.value + '<br/>';
+                console.log('Notification sent successfully:', result);
+            })
+            .catch(function(error) {
+                outputDiv.innerHTML += '<span style="color: red;">[通知发送失败]</span> ' + error + '<br/>';
+                console.error('Failed to send notification:', error);
+            });
+    },
+    
+    // 新增：广播消息给所有连接的设备
+    broadcastMessage: function() {
+        var input = document.querySelector('input');
+        var bytes = stringToBytes(input.value);
+        
+        blePeripheral.notifyAllCentrals(SERVICE_UUID, RX_UUID, bytes)
+            .then(function(result) {
+                outputDiv.innerHTML += '<strong>[广播已发送]</strong> ' + input.value + ' (发送给 ' + result.connectedCentralsCount + ' 个设备)<br/>';
+                console.log('Broadcast sent successfully:', result);
+            })
+            .catch(function(error) {
+                outputDiv.innerHTML += '<span style="color: red;">[广播发送失败]</span> ' + error + '<br/>';
+                console.error('Failed to broadcast message:', error);
+            });
     },
     didReceiveWriteRequest: function(request) {
         var message = bytesToString(request.value);

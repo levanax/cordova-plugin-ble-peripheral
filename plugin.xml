@@ -25,6 +25,31 @@
             </feature>
         </config-file>
 
+        <!-- iOS 隐私权限配置 -->
+        <config-file target="*-Info.plist" parent="NSBluetoothAlwaysUsageDescription">
+            <string>This app uses Bluetooth to communicate with peripheral devices.</string>
+        </config-file>
+        
+        <config-file target="*-Info.plist" parent="NSBluetoothPeripheralUsageDescription">
+            <string>This app uses Bluetooth to act as a peripheral device.</string>
+        </config-file>
+
+        <!-- 后台模式配置 -->
+        <config-file target="*-Info.plist" parent="UIBackgroundModes">
+            <array>
+                <string>bluetooth-peripheral</string>
+            </array>
+        </config-file>
+
+        <!-- 支持的设备方向 -->
+        <config-file target="*-Info.plist" parent="UISupportedInterfaceOrientations">
+            <array>
+                <string>UIInterfaceOrientationPortrait</string>
+                <string>UIInterfaceOrientationLandscapeLeft</string>
+                <string>UIInterfaceOrientationLandscapeRight</string>
+            </array>
+        </config-file>
+
         <header-file src="src/ios/BLEPeripheralPlugin.h" target-dir="BLEPeripheralPlugin" />
         <source-file src="src/ios/BLEPeripheralPlugin.m" target-dir="BLEPeripheralPlugin" />
 

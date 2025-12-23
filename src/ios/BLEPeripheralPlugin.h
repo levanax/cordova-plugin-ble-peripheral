@@ -30,6 +30,8 @@
     NSString* publishServiceCallbackId; // TODO need to handle multiple
     NSString* createServiceFromJSONCallbackId;
     NSString* startAdvertisingCallbackId;
+    BOOL isAdvertising;
+    NSMutableSet* connectedCentrals;
 }
 
 @property (strong, nonatomic) CBPeripheralManager *manager;
@@ -45,6 +47,25 @@
 - (void)setCharacteristicValueChangedListener:(CDVInvokedUrlCommand *)command;
 - (void)setDescriptorValueChangedListener:(CDVInvokedUrlCommand *)command;
 - (void)setBluetoothStateChangedListener:(CDVInvokedUrlCommand *)command;
+
+// 新增方法
+- (void)stopAdvertising:(CDVInvokedUrlCommand *)command;
+- (void)isAdvertising:(CDVInvokedUrlCommand *)command;
+- (void)getConnectedCentrals:(CDVInvokedUrlCommand *)command;
+- (void)removeService:(CDVInvokedUrlCommand *)command;
+- (void)removeAllServices:(CDVInvokedUrlCommand *)command;
+
+// 通知方法
+- (void)notifyCharacteristicValue:(CDVInvokedUrlCommand *)command;
+- (void)notifyAllCentrals:(CDVInvokedUrlCommand *)command;
+
+// 调试和状态检查方法
+- (void)getBluetoothState:(CDVInvokedUrlCommand *)command;
+- (void)getManagerInfo:(CDVInvokedUrlCommand *)command;
+
+// 设备信息方法
+- (void)getPeripheralInfo:(CDVInvokedUrlCommand *)command;
+- (void)getLocalBluetoothInfo:(CDVInvokedUrlCommand *)command;
 
 @end
 

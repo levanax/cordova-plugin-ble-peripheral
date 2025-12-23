@@ -1,0 +1,63 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="com.example.ble.peripheral" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+    <name>BLE Peripheral Example</name>
+    <description>
+        示例：Cordova BLE外设插件，兼容iOS 17/18
+    </description>
+    <author href="https://github.com/don">
+        Don Coleman
+    </author>
+    <content src="index.html" />
+    
+    <!-- 基础插件 -->
+    <plugin name="cordova-plugin-whitelist" spec="1" />
+    <access origin="*" />
+    <allow-intent href="http://*/*" />
+    <allow-intent href="https://*/*" />
+    <allow-intent href="tel:*" />
+    <allow-intent href="sms:*" />
+    <allow-intent href="mailto:*" />
+    <allow-intent href="geo:*" />
+    
+    <!-- Android平台配置 -->
+    <platform name="android">
+        <allow-intent href="market:*" />
+    </platform>
+    
+    <!-- iOS平台配置 -->
+    <platform name="ios">
+        <!-- 后台模式支持 -->
+        <config-file parent="UIBackgroundModes" target="*-Info.plist">
+            <array>
+                <string>bluetooth-peripheral</string>
+            </array>
+        </config-file>
+        
+        <!-- 蓝牙权限描述 - iOS 13+ 必需 -->
+        <config-file parent="NSBluetoothAlwaysUsageDescription" target="*-Info.plist">
+            <string>此应用需要使用蓝牙与外围设备通信</string>
+        </config-file>
+        
+        <config-file parent="NSBluetoothPeripheralUsageDescription" target="*-Info.plist">
+            <string>此应用需要使用蓝牙作为外围设备</string>
+        </config-file>
+        
+        <!-- 支持的设备方向 -->
+        <config-file parent="UISupportedInterfaceOrientations" target="*-Info.plist">
+            <array>
+                <string>UIInterfaceOrientationPortrait</string>
+                <string>UIInterfaceOrientationLandscapeLeft</string>
+                <string>UIInterfaceOrientationLandscapeRight</string>
+            </array>
+        </config-file>
+        
+        <!-- 最低iOS版本 -->
+        <preference name="deployment-target" value="12.0" />
+        
+        <allow-intent href="itms:*" />
+        <allow-intent href="itms-apps:*" />
+    </platform>
+    
+    <!-- BLE外设插件 -->
+    <plugin name="cordova-plugin-ble-peripheral" spec="~1.0.0" />
+</widget>

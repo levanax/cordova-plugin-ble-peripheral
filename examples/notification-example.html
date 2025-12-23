@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BLE外设通知示例</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .section {
+            margin-bottom: 25px;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        
+        .section h3 {
+            margin-top: 0;
+            color: #555;
+        }
+        
+        .input-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #666;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        
+        button {
+            background: #007AFF;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        button:hover {
+            background: #0056CC;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .button-danger {
+            background: #FF3B30;
+        }
+        
+        .button-danger:hover {
+            background: #D70015;
+        }
+        
+        .button-success {
+            background: #34C759;
+        }
+        
+        .button-success:hover {
+            background: #248A3D;
+        }
+        
+        #status {
+            height: 200px;
+            overflow-y: auto;
+            background: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        
+        #status div {
+            margin-bottom: 5px;
+            padding: 2px 0;
+        }
+        
+        .status-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .info-box {
+            background: #E3F2FD;
+            border: 1px solid #2196F3;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .info-box h4 {
+            margin: 0 0 10px 0;
+            color: #1976D2;
+        }
+        
+        .info-box p {
+            margin: 5px 0;
+            color: #424242;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔵 BLE外设通知功能演示</h1>
+        
+        <div class="info-box">
+            <h4>功能说明</h4>
+            <p>• <strong>单个通知</strong>: 向连接的中心设备发送自定义消息</p>
+            <p>• <strong>广播消息</strong>: 向所有连接的设备同时发送消息</p>
+            <p>• <strong>自动通知</strong>: 每5秒自动发送时间戳通知</p>
+            <p>• <strong>自动回复</strong>: 收到写入请求时自动发送确认消息</p>
+        </div>
+        
+        <div class="section">
+            <h3>📤 发送单个通知</h3>
+            <div class="input-group">
+                <label for="messageInput">通知消息:</label>
+                <input type="text" id="messageInput" placeholder="输入要发送的消息..." value="Hello from BLE Peripheral!">
+            </div>
+            <button id="sendNotification">发送通知</button>
+        </div>
+        
+        <div class="section">
+            <h3>📢 广播消息</h3>
+            <div class="input-group">
+                <label for="broadcastInput">广播消息:</label>
+                <input type="text" id="broadcastInput" placeholder="输入广播消息..." value="Broadcast to all devices!">
+            </div>
+            <button id="broadcastMessage" class="button-success">广播消息</button>
+        </div>
+        
+        <div class="section">
+            <h3>⏰ 自动通知</h3>
+            <p>自动每5秒发送一次时间戳通知给所有连接的设备</p>
+            <button id="startAutoNotify" class="button-success">开始自动通知</button>
+            <button id="stopAutoNotify" class="button-danger" disabled>停止自动通知</button>
+        </div>
+        
+        <div class="section">
+            <h3>📊 状态日志</h3>
+            <div class="status-title">实时状态信息:</div>
+            <div id="status"></div>
+        </div>
+    </div>
+
+    <script type="text/javascript" src="cordova.js"></script>
+    <script type="text/javascript" src="notification-example.js"></script>
+</body>
+</html>

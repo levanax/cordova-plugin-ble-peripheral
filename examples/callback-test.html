@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>iOS 18 回调功能测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .alert {
+            background: #FFF3CD;
+            border: 1px solid #FFEAA7;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+            color: #856404;
+        }
+        
+        .alert h4 {
+            margin: 0 0 10px 0;
+            color: #856404;
+        }
+        
+        .stats-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #007AFF;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .button-group {
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        button {
+            background: #007AFF;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background: #0056CC;
+        }
+        
+        .button-secondary {
+            background: #6C757D;
+        }
+        
+        .button-secondary:hover {
+            background: #545B62;
+        }
+        
+        .button-success {
+            background: #28A745;
+        }
+        
+        .button-success:hover {
+            background: #1E7E34;
+        }
+        
+        .button-warning {
+            background: #FFC107;
+            color: #212529;
+        }
+        
+        .button-warning:hover {
+            background: #E0A800;
+        }
+        
+        .button-danger {
+            background: #DC3545;
+        }
+        
+        .button-danger:hover {
+            background: #C82333;
+        }
+        
+        #status {
+            height: 400px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 14px;
+            line-height: 1.4;
+            white-space: pre-wrap;
+        }
+        
+        #status div {
+            margin-bottom: 5px;
+            padding: 2px 0;
+        }
+        
+        .status-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .instructions {
+            background: #E3F2FD;
+            border: 1px solid #2196F3;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .instructions h4 {
+            margin: 0 0 10px 0;
+            color: #1976D2;
+        }
+        
+        .instructions ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin: 5px 0;
+            color: #424242;
+        }
+        
+        @media (max-width: 768px) {
+            .stats-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                padding: 15px;
+            }
+            
+            button {
+                display: block;
+                width: 100%;
+                margin: 10px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 iOS 18 回调功能测试</h1>
+        
+        <div class="alert">
+            <h4>⚠️ 测试说明</h4>
+            <p>此页面专门用于测试iOS 18上的<code>onBluetoothStateChange</code>和<code>onWriteRequest</code>回调功能。请确保蓝牙已开启并且应用已获得蓝牙权限。</p>
+        </div>
+        
+        <div class="instructions">
+            <h4>📋 测试步骤</h4>
+            <ol>
+                <li>点击"设置回调"按钮注册回调监听器</li>
+                <li>点击"创建测试服务"创建BLE服务</li>
+                <li>点击"开始广播"启动BLE广播</li>
+                <li>使用BLE扫描应用（如LightBlue）连接到此设备</li>
+                <li>尝试写入数据到TX特征以触发写入请求回调</li>
+                <li>观察回调统计和日志输出</li>
+            </ol>
+        </div>
+        
+        <div class="stats-section">
+            <div class="stat-card">
+                <div class="stat-number" id="writeRequestCount">0</div>
+                <div class="stat-label">写入请求回调</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="stateChangeCount">0</div>
+                <div class="stat-label">状态变化回调</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="connectionCount">0</div>
+                <div class="stat-label">连接事件</div>
+            </div>
+        </div>
+        
+        <div class="button-group">
+            <button id="setupCallbacks" class="button-success">📡 设置回调</button>
+            <button id="createTestService" class="button-success">🛠️ 创建测试服务</button>
+            <button id="startAdvertising" class="button-success">📢 开始广播</button>
+            <button id="testCallbacks" class="button-warning">🧪 测试回调</button>
+            <button id="clearLogs" class="button-danger">🗑️ 清空日志</button>
+        </div>
+        
+        <div class="status-title">📊 实时测试日志</div>
+        <div id="status">等待开始测试...\n</div>
+        
+        <div class="instructions" style="margin-top: 20px;">
+            <h4>🔍 故障排除</h4>
+            <ul>
+                <li><strong>回调不触发:</strong> 检查蓝牙权限和设备连接状态</li>
+                <li><strong>写入请求无响应:</strong> 确保特征配置了WRITE属性</li>
+                <li><strong>状态变化不更新:</strong> 检查蓝牙开关状态或重启应用</li>
+                <li><strong>连接失败:</strong> 确保服务已正确创建和发布</li>
+                <li><strong>iOS 18特定问题:</strong> 检查控制台是否有线程相关错误</li>
+            </ul>
+        </div>
+        
+        <div class="alert" style="margin-top: 20px; background: #D1ECF1; border-color: #BEE5EB; color: #0C5460;">
+            <h4>💡 测试提示</h4>
+            <ul>
+                <li>使用<strong>LightBlue Explorer</strong>或<strong>nRF Connect</strong>等BLE调试应用进行测试</li>
+                <li>连接后查找服务UUID: <code>6E400001-B5A3-F393-E0A9-E50E24DCCA9E</code></li>
+                <li>写入数据到TX特征: <code>6E400002-B5A3-F393-E0A9-E50E24DCCA9E</code></li>
+                <li>观察RX特征的通知: <code>6E400003-B5A3-F393-E0A9-E50E24DCCA9E</code></li>
+            </ul>
+        </div>
+    </div>
+
+    <script type="text/javascript" src="cordova.js"></script>
+    <script type="text/javascript" src="callback-test.js"></script>
+</body>
+</html>

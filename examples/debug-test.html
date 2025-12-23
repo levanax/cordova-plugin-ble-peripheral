@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>iOS 18 BLE调试测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .alert {
+            background: #FFF3CD;
+            border: 1px solid #FFEAA7;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+            color: #856404;
+        }
+        
+        .alert h4 {
+            margin: 0 0 10px 0;
+            color: #856404;
+        }
+        
+        .button-group {
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        button {
+            background: #007AFF;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background: #0056CC;
+        }
+        
+        .button-secondary {
+            background: #6C757D;
+        }
+        
+        .button-secondary:hover {
+            background: #545B62;
+        }
+        
+        .button-success {
+            background: #28A745;
+        }
+        
+        .button-success:hover {
+            background: #1E7E34;
+        }
+        
+        .button-warning {
+            background: #FFC107;
+            color: #212529;
+        }
+        
+        .button-warning:hover {
+            background: #E0A800;
+        }
+        
+        #debugStatus {
+            height: 400px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 14px;
+            line-height: 1.4;
+            white-space: pre-wrap;
+        }
+        
+        #debugStatus div {
+            margin-bottom: 5px;
+            padding: 2px 0;
+        }
+        
+        .status-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .method-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .instructions {
+            background: #E3F2FD;
+            border: 1px solid #2196F3;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .instructions h4 {
+            margin: 0 0 10px 0;
+            color: #1976D2;
+        }
+        
+        .instructions ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin: 5px 0;
+            color: #424242;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 iOS 18 BLE外设调试工具</h1>
+        
+        <div class="alert">
+            <h4>⚠️ 调试说明</h4>
+            <p>此工具专门用于诊断iOS 18上BLE外设插件返回null的问题。请确保：</p>
+            <ul>
+                <li>设备已连接并启用开发者模式</li>
+                <li>应用已获得蓝牙权限</li>
+                <li>蓝牙已开启</li>
+                <li>打开Safari开发者工具查看详细日志</li>
+            </ul>
+        </div>
+        
+        <div class="instructions">
+            <h4>📋 使用说明</h4>
+            <ol>
+                <li>点击"运行完整诊断"进行全面测试</li>
+                <li>观察每个步骤的执行结果和耗时</li>
+                <li>如果某个步骤失败，可以单独测试该方法</li>
+                <li>查看控制台日志获取详细错误信息</li>
+                <li>将测试结果发送给开发者进行分析</li>
+            </ol>
+        </div>
+        
+        <div class="button-group">
+            <button onclick="debugBLE.runDiagnostics()" class="button-success">🚀 运行完整诊断</button>
+            <button onclick="document.getElementById('debugStatus').innerHTML = ''; console.clear();" class="button-secondary">🗑️ 清空日志</button>
+        </div>
+        
+        <div class="status-title">📊 实时诊断日志</div>
+        <div id="debugStatus">等待开始诊断测试...\n</div>
+        
+        <div class="status-title">🔧 单独测试方法</div>
+        <div class="method-buttons">
+            <button onclick="debugBLE.testSingleMethod('deviceInfo')" class="button-warning">📱 获取设备信息</button>
+            <button onclick="debugBLE.testSingleMethod('peripheralInfo')" class="button-warning">📊 获取外设信息</button>
+            <button onclick="debugBLE.testSingleMethod('bluetoothState')" class="button-warning">检查蓝牙状态</button>
+            <button onclick="debugBLE.testSingleMethod('managerInfo')" class="button-warning">检查管理器信息</button>
+            <button onclick="debugBLE.testSingleMethod('createService')" class="button-warning">测试创建服务</button>
+            <button onclick="debugBLE.testSingleMethod('addCharacteristic')" class="button-warning">测试添加特征</button>
+            <button onclick="debugBLE.testSingleMethod('publishService')" class="button-warning">测试发布服务</button>
+            <button onclick="debugBLE.testSingleMethod('startAdvertising')" class="button-warning">测试开始广播</button>
+        </div>
+        
+        <div class="instructions">
+            <h4>🐛 常见问题排查</h4>
+            <ul>
+                <li><strong>所有方法返回null：</strong> 检查蓝牙权限和状态</li>
+                <li><strong>创建服务失败：</strong> 检查UUID格式是否正确</li>
+                <li><strong>发布服务超时：</strong> 这是正常的异步操作，需要等待回调</li>
+                <li><strong>广播失败：</strong> 确保服务已成功发布</li>
+                <li><strong>权限被拒绝：</strong> 到设置中手动开启蓝牙权限</li>
+            </ul>
+        </div>
+    </div>
+
+    <script type="text/javascript" src="cordova.js"></script>
+    <script type="text/javascript" src="debug-test.js"></script>
+</body>
+</html>

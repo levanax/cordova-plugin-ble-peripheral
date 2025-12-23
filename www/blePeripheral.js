@@ -240,6 +240,93 @@ module.exports = {
 
     onBluetoothStateChange: function(callback) {
         onBluetoothStateChangeCallback = callback;
+    },
+
+    // 新增方法
+    stopAdvertising: function() {
+        return new Promise(function(resolve, reject) {
+            cordova.exec(resolve, reject, 'BLEPeripheral', 'stopAdvertising', []);
+        });
+    },
+
+    isAdvertising: function() {
+        return new Promise(function(resolve, reject) {
+            cordova.exec(resolve, reject, 'BLEPeripheral', 'isAdvertising', []);
+        });
+    },
+
+    getConnectedCentrals: function() {
+        return new Promise(function(resolve, reject) {
+            cordova.exec(resolve, reject, 'BLEPeripheral', 'getConnectedCentrals', []);
+        });
+    },
+
+    removeService: function(serviceUUID) {
+        return new Promise(function(resolve, reject) {
+            cordova.exec(resolve, reject, 'BLEPeripheral', 'removeService', [serviceUUID]);
+        });
+    },
+
+    removeAllServices: function() {
+        return new Promise(function(resolve, reject) {
+            cordova.exec(resolve, reject, 'BLEPeripheral', 'removeAllServices', []);
+        });
+    },
+
+    // 通知方法 - 向连接的中心设备发送通知
+    notifyCharacteristicValue: function(serviceUUID, characteristicUUID, value, centralIdentifiers) {
+        return new Promise(function(resolve, reject) {
+            if (value.constructor !== ArrayBuffer) {
+                reject('value must be an ArrayBuffer');
+                return;
+            }
+            
+            var args = [serviceUUID, characteristicUUID, value];
+            if (centralIdentifiers && Array.isArray(centralIdentifiers)) {
+                args.push(centralIdentifiers);
+            }
+            
+            cordova.exec(resolve, reject, 'BLEPeripheral', 'notifyCharacteristicValue', args);
+        });
+    },
+
+    // 向所有连接的中心设备广播通知
+    notifyAllCentrals: function(serviceUUID, characteristicUUID, value) {
+        return new Promise(function(resolve, reject) {
+            if (value.constructor !== ArrayBuffer) {
+                reject('value must be an ArrayBuffer');
+                return;
+            }
+            
+            cordova.exec(resolve, reject, 'BLEPeripheral', 'notifyAllCentrals', [serviceUUID, characteristicUUID, value]);
+        });
+    },
+
+    // 调试和状态检查方法
+    getBluetoothState: function() {
+        return new Promise(function(resolve, reject) {
+            cordova.exec(resolve, reject, 'BLEPeripheral', 'getBluetoothState', []);
+        });
+    },
+
+    getManagerInfo: function() {
+        return new Promise(function(resolve, reject) {
+            cordova.exec(resolve, reject, 'BLEPeripheral', 'getManagerInfo', []);
+        });
+    },
+
+    // 获取外设完整信息（包括设备标识符、服务、连接等）
+    getPeripheralInfo: function() {
+        return new Promise(function(resolve, reject) {
+            cordova.exec(resolve, reject, 'BLEPeripheral', 'getPeripheralInfo', []);
+        });
+    },
+
+    // 获取本地蓝牙详细信息
+    getLocalBluetoothInfo: function() {
+        return new Promise(function(resolve, reject) {
+            cordova.exec(resolve, reject, 'BLEPeripheral', 'getLocalBluetoothInfo', []);
+        });
     }
 
 };
