@@ -296,14 +296,19 @@ static NSDictionary *dataToArrayBuffer(NSData* data) {
 }
 
 - (void)setBluetoothStateChangedListener:(CDVInvokedUrlCommand *)command {
+    NSLog(@"🔔 setBluetoothStateChangedListener called, callbackId: %@", command.callbackId);
     bluetoothStateChangedCallback  = [command.callbackId copy];
+    NSLog(@"✅ bluetoothStateChangedCallback set to: %@", bluetoothStateChangedCallback);
 
     int bluetoothState = [manager state];
     NSString *state = [bluetoothStates objectForKey:[NSNumber numberWithInt:bluetoothState]];
+    NSLog(@"📡 Current Bluetooth state: %@ (%d)", state, bluetoothState);
+    
     CDVPluginResult *pluginResult = nil;
     pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:state];
     [pluginResult setKeepCallbackAsBool:TRUE];
     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+    NSLog(@"✅ Initial state sent to JavaScript: %@", state);
 }
 
 // 新增方法实现
@@ -887,22 +892,43 @@ static NSDictionary *dataToArrayBuffer(NSData* data) {
 
 - (void)peripheralManager:(CBPeripheralManager *)peripheral central:(CBCentral *)central didSubscribeToCharacteristic:(CBCharacteristic *)characteristic
 {
-    NSLog(@"Central subscribed to characteristic");
-    [connectedCentrals addObject:central];
+    NSLog(@"Central subscribed to characteristic: %@ from device: %@", [[characteristic UUID] UUIDString], [central.identifier UUIDString]);
     
-    // 通知JavaScript层连接状态变化
-    if (bluetoothStateChangedCallback) {
-        NSDictionary *connectionInfo = @{
-            @"type": @"connection",
-            @"state": @"connected",
-            @"device": [central.identifier UUIDString],
-            @"characteristic": [[characteristic UUID] UUIDString]
-        };
-        
-        CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK 
-                                                       messageAsDictionary:connectionInfo];
-        [pluginResult setKeepCallbackAsBool:TRUE];
-        [self.commandDelegate sendPluginResult:pluginResult callbackId:bluetoothStateChangedCallback];
+    // 检测新连接：如果这是第一次收到来自该设备的订阅，发送连接通知
+    BOOL isNewConnection = NO;
+    if (![connectedCentrals containsObject:central]) {
+        isNewConnection = YES;
+        [connectedCentrals addObject:central];
+        NSLog(@"New central connected (via subscription): %@", [central.identifier UUIDString]);
+    }
+    
+    // 如果是新连接，发送连接通知
+    // iOS 18 要求回调必须在主线程中执行
+    if (isNewConnection) {
+        NSLog(@"📤 Preparing to send connection notification (subscription)");
+        dispatch_async(dispatch_get_main_queue(), ^{
+            NSLog(@"📤 On main thread, checking callback: %@", self->bluetoothStateChangedCallback);
+            if (self->bluetoothStateChangedCallback) {
+                NSDictionary *connectionInfo = @{
+                    @"type": @"connection",
+                    @"state": @"connected",
+                    @"device": [central.identifier UUIDString],
+                    @"characteristic": [[characteristic UUID] UUIDString],
+                    @"service": [[[characteristic service] UUID] UUIDString]
+                };
+                
+                NSLog(@"📤 Creating plugin result with connection info: %@", connectionInfo);
+                CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK 
+                                                               messageAsDictionary:connectionInfo];
+                [pluginResult setKeepCallbackAsBool:TRUE];
+                
+                NSLog(@"📤 Sending plugin result to JavaScript, callbackId: %@", self->bluetoothStateChangedCallback);
+                [self.commandDelegate sendPluginResult:pluginResult callbackId:self->bluetoothStateChangedCallback];
+                NSLog(@"✅ Connection notification sent successfully (subscription)");
+            } else {
+                NSLog(@"⚠️ bluetoothStateChangedCallback is nil in didSubscribeToCharacteristic");
+            }
+        });
     }
 }
 
@@ -912,6 +938,48 @@ static NSDictionary *dataToArrayBuffer(NSData* data) {
 
     for (CBATTRequest *request in requests) {
         CBCharacteristic *characteristic = [request characteristic];
+        CBCentral *central = [request central];
+        
+        // 检测新连接：如果这是第一次收到来自该设备的请求，发送连接通知
+        BOOL isNewConnection = NO;
+        if (central) {
+            if (![connectedCentrals containsObject:central]) {
+                isNewConnection = YES;
+                [connectedCentrals addObject:central];
+                NSLog(@"✅ New central connected (via write request): %@, total connected: %lu", 
+                      [central.identifier UUIDString], (unsigned long)[connectedCentrals count]);
+                
+                // 发送连接通知
+                if (bluetoothStateChangedCallback) {
+                    NSDictionary *connectionInfo = @{
+                        @"type": @"connection",
+                        @"state": @"connected",
+                        @"device": [central.identifier UUIDString],
+                        @"characteristic": [[characteristic UUID] UUIDString],
+                        @"service": [[[characteristic service] UUID] UUIDString]
+                    };
+                    
+                    NSLog(@"📤 Sending connection notification to JavaScript");
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        if (self->bluetoothStateChangedCallback) {
+                            CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK 
+                                                                       messageAsDictionary:connectionInfo];
+                            [pluginResult setKeepCallbackAsBool:TRUE];
+                            [self.commandDelegate sendPluginResult:pluginResult callbackId:self->bluetoothStateChangedCallback];
+                            NSLog(@"✅ Connection notification sent successfully");
+                        } else {
+                            NSLog(@"⚠️ bluetoothStateChangedCallback is nil, cannot send connection notification");
+                        }
+                    });
+                } else {
+                    NSLog(@"⚠️ bluetoothStateChangedCallback is nil, cannot send connection notification");
+                }
+            } else {
+                NSLog(@"📝 Write request from known central: %@", [central.identifier UUIDString]);
+            }
+        } else {
+            NSLog(@"⚠️ Write request has no central information");
+        }
 
         NSMutableDictionary *dictionary = [NSMutableDictionary new];
         [dictionary setObject:[[[characteristic service] UUID] UUIDString] forKey:@"service"];
@@ -920,24 +988,69 @@ static NSDictionary *dataToArrayBuffer(NSData* data) {
             [dictionary setObject:dataToArrayBuffer([request value]) forKey:@"value"];
         }
 
-        if (characteristicValueChangedCallback) {
-            CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:dictionary];
-            [pluginResult setKeepCallbackAsBool:TRUE];
-            [self.commandDelegate sendPluginResult:pluginResult callbackId:characteristicValueChangedCallback];
-        }
-
+        // 先响应请求，避免超时
         [peripheral respondToRequest:request withResult:CBATTErrorSuccess];
+        
+        // iOS 18 要求回调必须在主线程中执行
+        if (characteristicValueChangedCallback) {
+            NSDictionary *callbackDict = [dictionary copy]; // 复制字典以避免线程问题
+            dispatch_async(dispatch_get_main_queue(), ^{
+                CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:callbackDict];
+                [pluginResult setKeepCallbackAsBool:TRUE];
+                [self.commandDelegate sendPluginResult:pluginResult callbackId:self->characteristicValueChangedCallback];
+            });
+        }
     }
 }
 
 -(void)peripheralManager:(CBPeripheralManager *)peripheral didReceiveReadRequest:(CBATTRequest *)request {
     NSLog(@"Received read request for %@", [request characteristic]);
 
-    // FUTURE if there is a callback, call into JavaScript for a value
-    // otherwise, grab the current value of the characteristic and send it back
-
     CBCharacteristic *requestedCharacteristic = request.characteristic;
     CBService *requestedService = [requestedCharacteristic service];
+    CBCentral *central = [request central];
+    
+    // 检测新连接：如果这是第一次收到来自该设备的请求，发送连接通知
+    if (central) {
+        if (![connectedCentrals containsObject:central]) {
+            [connectedCentrals addObject:central];
+            NSLog(@"✅ New central connected (via read request): %@, total connected: %lu", 
+                  [central.identifier UUIDString], (unsigned long)[connectedCentrals count]);
+            
+            // 发送连接通知
+            if (bluetoothStateChangedCallback) {
+                NSDictionary *connectionInfo = @{
+                    @"type": @"connection",
+                    @"state": @"connected",
+                    @"device": [central.identifier UUIDString],
+                    @"characteristic": [[requestedCharacteristic UUID] UUIDString],
+                    @"service": [[requestedService UUID] UUIDString]
+                };
+                
+                NSLog(@"📤 Sending connection notification to JavaScript (read request)");
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    if (self->bluetoothStateChangedCallback) {
+                        CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK 
+                                                                   messageAsDictionary:connectionInfo];
+                        [pluginResult setKeepCallbackAsBool:TRUE];
+                        [self.commandDelegate sendPluginResult:pluginResult callbackId:self->bluetoothStateChangedCallback];
+                        NSLog(@"✅ Connection notification sent successfully (read request)");
+                    } else {
+                        NSLog(@"⚠️ bluetoothStateChangedCallback is nil, cannot send connection notification");
+                    }
+                });
+            } else {
+                NSLog(@"⚠️ bluetoothStateChangedCallback is nil, cannot send connection notification");
+            }
+        } else {
+            NSLog(@"📝 Read request from known central: %@", [central.identifier UUIDString]);
+        }
+    } else {
+        NSLog(@"⚠️ Read request has no central information");
+    }
+
+    // FUTURE if there is a callback, call into JavaScript for a value
+    // otherwise, grab the current value of the characteristic and send it back
 
     CBCharacteristic *characteristic  = [self findCharacteristicByUUID: [requestedCharacteristic UUID] service:requestedService];
 
@@ -955,19 +1068,22 @@ static NSDictionary *dataToArrayBuffer(NSData* data) {
     [connectedCentrals removeObject:central];
     
     // 通知JavaScript层连接状态变化
-    if (bluetoothStateChangedCallback) {
-        NSDictionary *connectionInfo = @{
-            @"type": @"connection",
-            @"state": @"disconnected",
-            @"device": [central.identifier UUIDString],
-            @"characteristic": [[characteristic UUID] UUIDString]
-        };
-        
-        CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK 
-                                                       messageAsDictionary:connectionInfo];
-        [pluginResult setKeepCallbackAsBool:TRUE];
-        [self.commandDelegate sendPluginResult:pluginResult callbackId:bluetoothStateChangedCallback];
-    }
+    // iOS 18 要求回调必须在主线程中执行
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (self->bluetoothStateChangedCallback) {
+            NSDictionary *connectionInfo = @{
+                @"type": @"connection",
+                @"state": @"disconnected",
+                @"device": [central.identifier UUIDString],
+                @"characteristic": [[characteristic UUID] UUIDString]
+            };
+            
+            CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK 
+                                                           messageAsDictionary:connectionInfo];
+            [pluginResult setKeepCallbackAsBool:TRUE];
+            [self.commandDelegate sendPluginResult:pluginResult callbackId:self->bluetoothStateChangedCallback];
+        }
+    });
 }
 
 

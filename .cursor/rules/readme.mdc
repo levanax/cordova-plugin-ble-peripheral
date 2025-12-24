@@ -1,0 +1,5 @@
+---
+alwaysApply: true
+---
+这是一个Cordova 插件，用于Android 与 ios 平台，现在需要兼容的安卓版本是 10 至 35； ios 是 13 到26，每一次调整必须兼容上述平台系统版本，如果未能兼容请给出说明原因。
+做Android修正，请先去查阅 Android官方API文档；做ios 修正，请先去查阅 ios 开发官方API文档；
